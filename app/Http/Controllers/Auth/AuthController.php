@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -176,6 +177,31 @@ class AuthController extends Controller
         ], 200);
     }
 
+
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user(); // Get the authenticated user
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => [
+                'required',
+                'string',
+                'email',
+                'max:255',
+                Rule::unique('users')->ignore($user->id)
+            ],
+        ]);
+
+        $user->update($validated);
+
+        return response()->json([
+            'message' => 'Profile updated successfully',
+            'user' => $user,
+        ], 200);
+    }
+
+
     public function logout(Request $request)
     {
         // Delete all tokens (or use currentAccessToken()->delete() for current token only)
@@ -186,134 +212,3 @@ class AuthController extends Controller
         ], 200);
     }
 }
-
-// namespace App\Http\Controllers\Auth;
-
-// use App\Mail\PasswordResetOtpMail;
-// use Illuminate\Support\Facades\Cache;
-// use Illuminate\Support\Facades\Mail;
-
-// use App\Http\Controllers\Controller;
-// use App\Models\User;
-// use Illuminate\Http\Request;
-// use Illuminate\Support\Facades\Auth;
-// use Illuminate\Support\Facades\Hash;
-
-// class AuthController extends Controller
-// {
-//     public function register(Request $request)
-//     {
-//         $request->validate([
-//             'name' => 'required|string|max:255',
-//             'email' => 'required|string|email|max:255|unique:users',
-//             'password' => 'required|string|min:8',
-//             'password_confirmation' => 'required|string|min:8|same:password',
-//         ]);
-
-//         $user = User::create([
-//             'name' => $request->input("name"),
-//             'email' => $request->input("email"),
-//             'password' => $request->input("password"),
-//         ]);
-
-//         return response()->json([
-//             'message' => 'User registered successfully',
-//             'user' => $user,
-//         ], 201);
-//     }
-//     public function login(Request $request)
-//     {
-//         $request->validate([
-//             'email' => 'required|string|email|exists:users,email',
-//             'password' => 'required|string',
-//         ]);
-
-//         $user = User::where('email', $request->input("email"))->first();
-
-//         if (!$user || !Hash::check($request->input("password"), $user->password)) {
-//             return response()->json([
-//                 'message' => 'Invalid credentials',
-//             ], 401);
-//         }
-//         $token = $user->createToken('authToken')->plainTextToken;
-//         return response()->json([
-//             'message' => 'User logged in successfully',
-//             'token' => $token,
-//             'user' => [
-//                 'id' => $user->id,
-//                 'name' => $user->name,
-//                 'email' => $user->email,
-//             ],
-//         ], 200);
-//     }
-//     public function sendResetOtp(Request $request)
-//     {
-//         $request->validate(['email' => 'required|email']);
-//         $user = User::where('email', $request->input("email"))->first();
-//         if (!$user) {
-//             return response()->json(['message' => 'User not found'], 404);
-//         }
-//         $otp = rand(100000, 999999);
-//         $expiryMinutes = 10;
-//         // Store OTP temporarily in cache or database
-//         Cache::put('password_reset_otp_' . $user->email, $otp, now()->addMinutes($expiryMinutes));
-//         // Send email
-//         Mail::to($user->email)->send(new PasswordResetOtpMail($user->name, $otp, $expiryMinutes));
-//         return response()->json(['message' => 'OTP sent successfully']);
-//     }
-//     public function verifyOtpAndResetPassword(Request $request)
-//     {
-//         $request->validate([
-//             'email' => 'required|email',
-//             'otp' => 'required|digits:6',
-//             'password' => 'required|min:8',
-//             'password_confirmation' => 'required|min:8|same:password',
-//         ]);
-
-//         $storedOtp = Cache::get('password_reset_otp_' . $request->input("email"));
-
-//         if (!$storedOtp) {
-//             return response()->json(['message' => 'OTP expired or invalid'], 400);
-//         }
-
-//         if ($storedOtp != $request->otp) {
-//             return response()->json(['message' => 'Incorrect OTP'], 400);
-//         }
-
-//         $user = User::where('email', $request->input("email"))->first();
-//         $user->update(['password' => bcrypt($request->input("password"))]);
-
-//         Cache::forget('password_reset_otp_' . $request->input("email"));
-
-//         return response()->json(['message' => 'Password reset successful']);
-//     }
-//     public function me(Request $request)
-//     {
-//         return response()->json([
-//             'user' => Auth::user(),
-//         ], 200);
-//     }
-//     public function chnagePassword(Request $request)
-//     {
-//         $request->validate([
-//             'password' => 'required|string|min:8',
-//             'password_confirmation' => 'required|string|min:8|same:password',
-//         ]);
-
-//         $user = $request->user();
-//         $user->password = $request->input("password");
-//         $user->save();
-
-//         return response()->json([
-//             'message' => 'Password changed successfully',
-//         ], 200);
-//     }
-//     public function logout(Request $request)
-//     {
-//         $request->user()->tokens()->delete();
-//         return response()->json([
-//             'success' => true,
-//             'message' => 'Logout successful.',
-//         ]);
-//     }
-// }
