@@ -19,8 +19,11 @@ use Illuminate\Support\Facades\Route;
 Route::controller(AuthController::class)->group(function () {
     Route::post('/register', 'register');
     Route::post('/login', 'login');
-    Route::post('/send-reset-otp', 'sendResetOtp');
-    Route::post('/verify-otp-and-reset-password', 'verifyOtpAndResetPassword');
+
+    // Password reset flow (3 steps)
+    Route::post('/forgot-password', 'sendResetOtp');           // Step 1: Send OTP
+    Route::post('/verify-reset-otp', 'verifyResetOtp');       // Step 2: Verify OTP
+    Route::post('/reset-password', 'resetPassword');          // Step 3: Reset password
 });
 
 // Protected routes
@@ -29,14 +32,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::controller(AuthController::class)->group(function () {
         Route::get('/me', 'me');
         Route::post('/change-password', 'changePassword');
-        Route::post('/update-profile', 'updateProfile');
+        Route::put('/update-profile', 'updateProfile');        // Changed to PUT
         Route::post('/logout', 'logout');
     });
 
     // User resource routes
     Route::apiResource('users', AuthUserController::class);
 });
-
-// Route::get('/user', function (Request $request) {
-//     return $request->user();
-// })->middleware('auth:sanctum');
